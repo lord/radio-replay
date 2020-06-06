@@ -1,0 +1,9 @@
+{
+  "short_name": "NYPD Police Scanner",
+  "name": "NYPD Police Scanner",
+  "icons": [
+  ],
+  "start_url": ".",
+  "display": "standalone"
+
+}
