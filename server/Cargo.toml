@@ -7,3 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+simplemad = { git = "https://github.com/RustAudio/simplemad" }
+tide = { git = "https://github.com/lord/tide" }
+async-std = { version = "1.6.0", features = ["attributes"] }
+reqwest = { version = "0.10", features = ["blocking", "json"] }
+hound = { version = "3.4.0" }
