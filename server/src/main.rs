@@ -1,17 +1,22 @@
-// #[async_std::main]
-// async fn main() -> Result<(), std::io::Error> {
-//     let mut app = tide::new();
-//     app.at("/").get(|_| async { Ok("Hello, world!") });
-//     app.at("/sse").get(tide::sse::endpoint(|_req, sender| async move {
-//         sender.send("fruit", "banana", None).await;
-//         loop {
-//             async_std::task::sleep(std::time::Duration::from_secs(2)).await;
-//             sender.send("fruit", "apple", None).await;
-//         }
-//     }));
-//     app.listen("localhost:8080").await?;
-//     Ok(())
-// }
+#[async_std::main]
+async fn main() -> Result<(), std::io::Error> {
+    let mut app = tide::new();
+    app.at("/").get(|_| async { Ok("Hello, world!") });
+    app.at("/").get(|_| async { Ok("Hello, world!") });
+    app.at("/audio").serve_dir("example/")?;
+    app.at("/stream").get(tide::sse::endpoint(|_req, sender| async move {
+        loop {
+            sender.send("audio", r#"{
+    "timestamp": 1591558692000,
+    "channel": "nyc-cw1",
+    "url": "/audio/example.mp3"
+}"#, None).await;
+            async_std::task::sleep(std::time::Duration::from_secs(12)).await;
+        }
+    }));
+    app.listen("localhost:8080").await?;
+    Ok(())
+}
 
 // const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
 
