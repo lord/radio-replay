@@ -1221,6 +1221,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "hound",
+ "http-types",
  "reqwest",
  "simplemad",
  "tide",
@@ -1411,7 +1412,7 @@ dependencies = [
 [[package]]
 name = "tide"
 version = "0.10.0"
-source = "git+https://github.com/lord/tide#0a93ab173a74f0f6be0abf1940c3792aaec10247"
+source = "git+https://github.com/lord/tide?branch=cors#e893faf45501619b472fa4b536b4ec1f91bb51c5"
 dependencies = [
  "async-h1",
  "async-sse",

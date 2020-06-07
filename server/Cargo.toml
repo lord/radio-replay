@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 simplemad = { git = "https://github.com/lord/simplemad", features = ["vendor"] }
-tide = { git = "https://github.com/lord/tide" }
+tide = { git = "https://github.com/lord/tide", branch = "cors" }
 async-std = { version = "1.6.0", features = ["attributes"] }
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 hound = { version = "3.4.0" }
