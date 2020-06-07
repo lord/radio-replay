@@ -1221,7 +1221,6 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "hound",
- "http-types",
  "reqwest",
  "simplemad",
  "tide",
