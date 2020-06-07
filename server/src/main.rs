@@ -6,11 +6,7 @@ async fn main() -> Result<(), std::io::Error> {
     app.at("/audio").serve_dir("example/")?;
     app.at("/stream").get(tide::sse::endpoint(|_req, sender| async move {
         loop {
-            sender.send("audio", r#"{
-    "timestamp": 1591558692000,
-    "channel": "nyc-cw1",
-    "url": "/audio/example.mp3"
-}"#, None).await;
+            sender.send("audio", r#"{"timestamp":1591558692000,"channel":"nyc-cw1","url":"/audio/example.mp3"}"#, None).await;
             async_std::task::sleep(std::time::Duration::from_secs(12)).await;
         }
     }));
