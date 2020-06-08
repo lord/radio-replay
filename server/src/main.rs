@@ -1,6 +1,7 @@
 #![recursion_limit="1024"]
 
-mod splitter;
+mod audio_service;
+mod audio_store;
 mod recent_cache;
 
 #[async_std::main]

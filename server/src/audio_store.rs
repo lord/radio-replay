@@ -1,6 +1,5 @@
 use std::time::Duration;
 use futures::channel::mpsc::{self, UnboundedSender as Sender, UnboundedReceiver as Receiver};
-use async_std::io::Read;
 use std::pin::Pin;
 use std::task::Poll;
 use async_std::task::Context;
@@ -10,16 +9,16 @@ use std::sync::{Arc, Mutex};
 use crate::recent_cache::RecentCache;
 
 const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
-const METADATA_SENT_ON_INITIAL_LOAD: usize = 400;
-const RECONNECT_WAIT: Duration = Duration::from_secs(5);
-
+/// Splits multiple streams of wav audio into non-silent chunks, saves to disk,
+/// serves audio files based on id.
 #[derive(Clone)]
-pub struct Splitter {
-    metadata: RecentCache<AudioMetadata>,
+pub struct AudioStore {
 }
 
-#[derive(Hash, Debug, Clone, Copy)]
-pub struct AudioId(u64);
+pub enum AudioStream {
+    File,
+    Livestream,
+}
 
 #[derive(Clone, Debug)]
 pub struct AudioMetadata {
@@ -28,12 +27,10 @@ pub struct AudioMetadata {
     id: AudioId,
 }
 
-pub enum AudioStream {
-    File,
-    Livestream,
-}
+#[derive(Hash, Debug, Clone, Copy)]
+pub struct AudioId(u64);
 
-impl Read for AudioStream {
+impl async_std::io::Read for AudioStream {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context,
@@ -43,43 +40,17 @@ impl Read for AudioStream {
     }
 }
 
-impl Splitter {
-    pub fn new() -> Self {
-        Self {
-            metadata: RecentCache::new(METADATA_SENT_ON_INITIAL_LOAD),
-        }
+impl AudioStore {
+    pub fn new(metadata_cache: RecentCache<AudioMetadata>) -> Self {
+        // metadata_cache.send_item...()
+        unimplemented!()
     }
 
-    pub fn add_source(&self, channel_name: String, url: String) {
-        let this = self.clone();
-        std::thread::spawn(move || {
-            loop {
-                let resp = reqwest::blocking::get(&url).unwrap();
-                let mut decoder = simplemad::Decoder::decode(resp).unwrap();
-
-                for frame in decoder {
-                    match frame {
-                        Err(e) => println!("[{}] mp3 decoding error: {:?}", &channel_name, e),
-                        Ok(frame) => {
-                            this.handle_frame(&channel_name, &url, frame);
-                        }
-                    }
-                }
-
-                println!("[{}] disconnected from {}, will attempt to reconnect in {} seconds...", &channel_name, &url, RECONNECT_WAIT.as_secs());
-                std::thread::sleep(RECONNECT_WAIT);
-            }
-        });
+    pub fn add_audio(&self, channel_name: &str, data: Vec<i32>) {
+        unimplemented!()
     }
 
-    fn handle_frame(&self, channel_name: &str, url: &str, frame: simplemad::Frame) {
-    }
-
-    pub fn recent_stream(&self) -> Receiver<AudioMetadata> {
-        self.metadata.get_stream()
-    }
-
-    pub fn stream_audio(&self, id: AudioId) -> AudioStream {
+    pub fn get_stream(&self, id: AudioId) -> AudioStream {
         unimplemented!()
     }
 }
