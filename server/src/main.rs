@@ -1,4 +1,7 @@
+#![recursion_limit="1024"]
+
 mod splitter;
+mod recent_cache;
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
