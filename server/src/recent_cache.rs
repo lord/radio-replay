@@ -12,11 +12,14 @@ use futures::select;
 use futures::future::FutureExt;
 
 #[derive(Clone)]
-struct RecentCache<T: Send + Clone + 'static> {
+pub struct RecentCache<T: Send + Clone + 'static> {
     new_messages: Sender<T>,
     new_senders: Sender<Sender<T>>,
 }
 
+/// An async-channel cache. Allows sending new messages of type `T` to any number of listening Receivers.
+/// When a new receiever connects with `get_stream`, it will receieve the most recent `capacity` messages
+/// sent to the other streams.
 impl <T: Send + Clone + 'static> RecentCache<T> {
     pub fn new(capacity: usize) -> Self {
         let (new_messages_tx, new_messages_rx) = mpsc::unbounded();
