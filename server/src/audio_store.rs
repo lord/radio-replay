@@ -4,6 +4,8 @@ use std::pin::Pin;
 use std::task::Poll;
 use async_std::task::Context;
 use async_std::prelude::*;
+use async_std::prelude::*;
+use  async_std::stream::Stream;
 use async_std::fs::File;
 
 use std::sync::{Arc, Mutex, RwLock};
@@ -19,7 +21,11 @@ pub struct AudioStore {
 
 pub enum AudioStream {
     File(File),
-    Livestream,
+    Livestream {
+        new_chunks: Receiver<Vec<u8>>,
+        current_chunk: Option<Vec<u8>>,
+        current_index: usize,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -38,12 +44,47 @@ impl async_std::io::Read for AudioStream {
         cx: &mut Context,
         buf: &mut [u8]
     ) -> Poll<async_std::io::Result<usize>> {
-        match self.get_mut() {
+        match &mut self.get_mut() {
             AudioStream::File(file) => {
                 Pin::new(file).poll_read(cx, buf)
             }
-            AudioStream::Livestream => {
-                unimplemented!()
+            AudioStream::Livestream { new_chunks, current_chunk, current_index} => {
+                if current_chunk.is_none() {
+                    match Stream::poll_next(Pin::new(new_chunks), cx) {
+                        // waiting for new chunks
+                        Poll::Pending => return Poll::Pending,
+                        // end of stream; report zero more chunks
+                        Poll::Ready(None) => return Poll::Ready(Ok(0)),
+                        // another item is ready, load it up
+                        Poll::Ready(Some(item)) => {
+                            *current_chunk = Some(item)
+                        },
+                    }
+                }
+                let mut total_written = 0;
+                loop {
+                    let chunk = match current_chunk {
+                        Some(v) => v,
+                        None => break,
+                    };
+
+                    let left_in_buf = buf.len() - total_written;
+                    let left_in_current_chunk = chunk.len() - *current_index;
+                    let write_len = left_in_buf.min(left_in_current_chunk);
+
+                    buf[total_written..(total_written+write_len)].copy_from_slice(&chunk[*current_index..(*current_index+write_len)]);
+                    *current_index += write_len;
+                    total_written += write_len;
+
+                    if *current_index == chunk.len() {
+                        *current_chunk = match Stream::poll_next(Pin::new(new_chunks), cx) {
+                            Poll::Ready(Some(item)) => Some(item),
+                            _ => None,
+                        }
+                    }
+                }
+
+                Poll::Ready(Ok(total_written))
             }
         }
     }
