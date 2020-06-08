@@ -11,7 +11,9 @@ use crate::recent_cache::RecentCache;
 
 const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
 const METADATA_SENT_ON_INITIAL_LOAD: usize = 400;
+const RECONNECT_WAIT: Duration = Duration::from_secs(5);
 
+#[derive(Clone)]
 pub struct Splitter {
     metadata: RecentCache<AudioMetadata>,
 }
@@ -48,10 +50,29 @@ impl Splitter {
         }
     }
 
-    pub fn add_source(&self, url: &str) {
-        let url = url.to_string();
-        // TODO spawn new thread
-        unimplemented!()
+    pub fn add_source(&self, channel_name: String, url: String) {
+        let this = self.clone();
+        std::thread::spawn(move || {
+            loop {
+                let resp = reqwest::blocking::get(&url).unwrap();
+                let mut decoder = simplemad::Decoder::decode(resp).unwrap();
+
+                for frame in decoder {
+                    match frame {
+                        Err(e) => println!("[{}] mp3 decoding error: {:?}", &channel_name, e),
+                        Ok(frame) => {
+                            this.handle_frame(&channel_name, &url, frame);
+                        }
+                    }
+                }
+
+                println!("[{}] disconnected from {}, will attempt to reconnect in {} seconds...", &channel_name, &url, RECONNECT_WAIT.as_secs());
+                std::thread::sleep(RECONNECT_WAIT);
+            }
+        });
+    }
+
+    fn handle_frame(&self, channel_name: &str, url: &str, frame: simplemad::Frame) {
     }
 
     pub fn recent_stream(&self) -> Receiver<AudioMetadata> {
@@ -64,8 +85,6 @@ impl Splitter {
 }
 
 // fn main() {
-//     let resp = reqwest::blocking::get("http://scanner.fuck12.tech:8000/nypd-cw1").unwrap();
-//     let mut decoder = simplemad::Decoder::decode(resp).unwrap();
 //     let mut writer_opt = None;
 //     let mut n = 0;
 //     let mut file_len = 0;
