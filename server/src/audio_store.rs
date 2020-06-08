@@ -3,12 +3,14 @@ use futures::channel::mpsc::{self, UnboundedSender as Sender, UnboundedReceiver 
 use std::pin::Pin;
 use std::task::Poll;
 use async_std::task::Context;
-use async_std::prelude::StreamExt;
+use async_std::prelude::*;
+use async_std::fs::File;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use crate::recent_cache::RecentCache;
 
 const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
+
 /// Splits multiple streams of wav audio into non-silent chunks, saves to disk,
 /// serves audio files based on id.
 #[derive(Clone)]
@@ -16,7 +18,7 @@ pub struct AudioStore {
 }
 
 pub enum AudioStream {
-    File,
+    File(File),
     Livestream,
 }
 
@@ -36,7 +38,14 @@ impl async_std::io::Read for AudioStream {
         cx: &mut Context,
         buf: &mut [u8]
     ) -> Poll<async_std::io::Result<usize>> {
-        unimplemented!()
+        match self.get_mut() {
+            AudioStream::File(file) => {
+                Pin::new(file).poll_read(cx, buf)
+            }
+            AudioStream::Livestream => {
+                unimplemented!()
+            }
+        }
     }
 }
 
