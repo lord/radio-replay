@@ -5,12 +5,15 @@ async fn main() -> Result<(), std::io::Error> {
     app.at("/").get(|_| async { Ok("Hello, world!") });
     app.at("/audio").serve_dir("example/")?;
     app.at("/stream").get(tide::sse::endpoint(|_req, sender| async move {
+        let mut i: u64 = 0;
         for _ in 0..100 {
-            sender.send("audio", r#"{"timestamp":1591558692000,"channel":"nyc-cw1","url":"/audio/example.mp3"}"#, None).await;
+            i += 1;
+            sender.send("audio", format!("{{\"timestamp\":1591558692000,\"channel\":\"nyc-cw1\",\"url\":\"/audio/example.mp3?{}\"}}", i), None).await;
         }
         loop {
             async_std::task::sleep(std::time::Duration::from_secs(12)).await;
-            sender.send("audio", r#"{"timestamp":1591558692000,"channel":"nyc-cw1","url":"/audio/example.mp3"}"#, None).await;
+            i += 1;
+            sender.send("audio", format!("{{\"timestamp\":1591558692000,\"channel\":\"nyc-cw1\",\"url\":\"/audio/example.mp3?{}\"}}", i), None).await;
         }
     }));
     app.listen("localhost:8080").await?;
