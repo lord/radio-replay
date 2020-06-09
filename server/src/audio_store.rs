@@ -100,8 +100,11 @@ impl async_std::io::Read for AudioStream {
 }
 
 impl AudioStore {
-    pub fn new(metadata_cache: RecentCache<AudioMetadata>) -> Self {
-        unimplemented!()
+    pub fn new(metadata: RecentCache<AudioMetadata>) -> Self {
+        Self {
+            livestreams: Arc::new(Mutex::new(HashMap::new())),
+            metadata,
+        }
     }
 
     pub fn add_audio(&self, channel_name: &str, data: Vec<i32>) {
