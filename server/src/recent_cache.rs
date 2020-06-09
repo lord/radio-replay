@@ -1,15 +1,15 @@
-use std::time::Duration;
-use futures::channel::mpsc::{self, UnboundedSender as Sender, UnboundedReceiver as Receiver};
 use async_std::io::Read;
-use std::pin::Pin;
-use std::task::Poll;
-use async_std::task::Context;
 use async_std::prelude::StreamExt;
-use std::sync::Arc;
 use async_std::sync::Mutex;
-use std::collections::VecDeque;
-use futures::select;
+use async_std::task::Context;
+use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
 use futures::future::FutureExt;
+use futures::select;
+use std::collections::VecDeque;
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::Poll;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct RecentCache<T: Send + Clone + 'static> {
@@ -20,18 +20,26 @@ pub struct RecentCache<T: Send + Clone + 'static> {
 /// An async-channel cache. Allows sending new messages of type `T` to any number of listening Receivers.
 /// When a new receiever connects with `get_stream`, it will receieve the most recent `capacity` messages
 /// sent to the other streams. If capacity is `None`, the cache will have infinite size.
-impl <T: Send + Clone + 'static> RecentCache<T> {
+impl<T: Send + Clone + 'static> RecentCache<T> {
     pub fn new(capacity: Option<usize>) -> Self {
         let (new_messages_tx, new_messages_rx) = mpsc::unbounded();
         let (new_senders_tx, new_senders_rx) = mpsc::unbounded();
-        async_std::task::spawn(Self::handler_task(capacity, new_messages_rx, new_senders_rx));
+        async_std::task::spawn(Self::handler_task(
+            capacity,
+            new_messages_rx,
+            new_senders_rx,
+        ));
         Self {
             new_messages: new_messages_tx,
             new_senders: new_senders_tx,
         }
     }
 
-    async fn handler_task(capacity: Option<usize>, mut new_messages: Receiver<T>, mut new_senders: Receiver<Sender<T>>) {
+    async fn handler_task(
+        capacity: Option<usize>,
+        mut new_messages: Receiver<T>,
+        mut new_senders: Receiver<Sender<T>>,
+    ) {
         let mut recent_messages = VecDeque::with_capacity(capacity.unwrap_or(0));
         let mut senders = Vec::new();
         loop {

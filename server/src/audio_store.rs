@@ -1,23 +1,22 @@
-use std::time::Duration;
-use futures::channel::mpsc::{self, UnboundedSender as Sender, UnboundedReceiver as Receiver};
+use async_std::fs::File;
+use async_std::prelude::*;
+use async_std::prelude::*;
+use async_std::stream::Stream;
+use async_std::task::Context;
+use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
 use std::pin::Pin;
 use std::task::Poll;
-use async_std::task::Context;
-use async_std::prelude::*;
-use async_std::prelude::*;
-use  async_std::stream::Stream;
-use async_std::fs::File;
+use std::time::Duration;
 
-use std::sync::{Arc, Mutex, RwLock};
 use crate::recent_cache::RecentCache;
+use std::sync::{Arc, Mutex, RwLock};
 
 const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
 
 /// Splits multiple streams of wav audio into non-silent chunks, saves to disk,
 /// serves audio files based on id.
 #[derive(Clone)]
-pub struct AudioStore {
-}
+pub struct AudioStore {}
 
 pub enum AudioStream {
     File(File),
@@ -42,13 +41,15 @@ impl async_std::io::Read for AudioStream {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context,
-        buf: &mut [u8]
+        buf: &mut [u8],
     ) -> Poll<async_std::io::Result<usize>> {
         match &mut self.get_mut() {
-            AudioStream::File(file) => {
-                Pin::new(file).poll_read(cx, buf)
-            }
-            AudioStream::Livestream { new_chunks, current_chunk, current_index} => {
+            AudioStream::File(file) => Pin::new(file).poll_read(cx, buf),
+            AudioStream::Livestream {
+                new_chunks,
+                current_chunk,
+                current_index,
+            } => {
                 if current_chunk.is_none() {
                     match Stream::poll_next(Pin::new(new_chunks), cx) {
                         // waiting for new chunks
@@ -56,9 +57,7 @@ impl async_std::io::Read for AudioStream {
                         // end of stream; report zero more chunks
                         Poll::Ready(None) => return Poll::Ready(Ok(0)),
                         // another item is ready, load it up
-                        Poll::Ready(Some(item)) => {
-                            *current_chunk = Some(item)
-                        },
+                        Poll::Ready(Some(item)) => *current_chunk = Some(item),
                     }
                 }
                 let mut total_written = 0;
@@ -72,7 +71,8 @@ impl async_std::io::Read for AudioStream {
                     let left_in_current_chunk = chunk.len() - *current_index;
                     let write_len = left_in_buf.min(left_in_current_chunk);
 
-                    buf[total_written..(total_written+write_len)].copy_from_slice(&chunk[*current_index..(*current_index+write_len)]);
+                    buf[total_written..(total_written + write_len)]
+                        .copy_from_slice(&chunk[*current_index..(*current_index + write_len)]);
                     *current_index += write_len;
                     total_written += write_len;
 
