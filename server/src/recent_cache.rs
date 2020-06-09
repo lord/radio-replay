@@ -42,15 +42,14 @@ impl<T: Send + Clone + 'static> RecentCache<T> {
     ) {
         let mut recent_messages = VecDeque::with_capacity(capacity.unwrap_or(0));
         let mut senders = Vec::new();
+        let mut next_msg_fut = new_messages.next().fuse();
+        let mut next_sender_fut = new_senders.next().fuse();
         loop {
-            let mut next_msg = new_messages.next().fuse();
-            let mut next_sender = new_senders.next().fuse();
             select! {
-                next_msg = next_msg => {
+                next_msg = next_msg_fut => {
                     let item = match next_msg {
                         Some(v) => v,
-                        // TODO not sure if should break here
-                        None => break,
+                        None => continue,
                     };
                     if let Some(capacity) = capacity {
                         while recent_messages.len() >= capacity-1 && capacity > 0 {
@@ -63,18 +62,22 @@ impl<T: Send + Clone + 'static> RecentCache<T> {
                     senders.retain(|sender: &Sender<T>| {
                         sender.unbounded_send(item.clone()).is_ok()
                     });
+
+                    next_msg_fut = new_messages.next().fuse();
                 }
-                next_sender = next_sender => {
+                next_sender = next_sender_fut => {
                     let sender = match next_sender {
                         Some(v) => v,
-                        // TODO not sure if should break here
-                        None => break,
+                        None => continue,
                     };
                     for message in recent_messages.iter() {
                         let _ = sender.unbounded_send(message.clone());
                     }
                     senders.push(sender);
+
+                    next_sender_fut = new_senders.next().fuse();
                 }
+                complete => break,
             }
         }
     }
