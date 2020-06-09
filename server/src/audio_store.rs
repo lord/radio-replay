@@ -19,8 +19,6 @@ use crate::recent_cache::RecentCache;
 use std::sync::Arc;
 use async_std::sync::Mutex;
 
-const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
-
 /// Splits multiple streams of wav audio into non-silent chunks, saves to disk,
 /// serves audio files based on id.
 #[derive(Clone)]
