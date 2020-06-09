@@ -4,20 +4,20 @@ use async_std::prelude::*;
 use async_std::stream::Stream;
 use async_std::task::Context;
 use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
-use std::sync::mpsc as sync_mpsc;
-use std::pin::Pin;
-use std::task::Poll;
-use std::time::Duration;
+use hound::WavWriter;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::pin::Pin;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
-use hound::WavWriter;
+use std::sync::mpsc as sync_mpsc;
+use std::task::Poll;
+use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::silence_gate::SilenceGate;
 use crate::recent_cache::RecentCache;
-use std::sync::Arc;
+use crate::silence_gate::SilenceGate;
 use async_std::sync::Mutex;
+use std::sync::Arc;
 
 /// Splits multiple streams of wav audio into non-silent chunks, saves to disk,
 /// serves audio files based on id.
@@ -70,7 +70,7 @@ impl async_std::io::Read for AudioStream {
                         Poll::Ready(Some(item)) => {
                             *current_index = 0;
                             *current_chunk = Some(item);
-                        },
+                        }
                     }
                 }
                 let mut total_written = 0;
@@ -143,10 +143,9 @@ impl AudioStore {
                         (true, None) => {
                             // open a new message
                             let timestamp = (SystemTime::now()
-                                                            .duration_since(UNIX_EPOCH)
-                                                            .expect("Time went backwards")
-                                                            .as_millis()
-                                                            as u64);
+                                .duration_since(UNIX_EPOCH)
+                                .expect("Time went backwards")
+                                .as_millis() as u64);
                             // let new_stream = RecentCache::new(None);
                             let id = this.next_id.fetch_add(1, Ordering::SeqCst);
                             let new_writer = WavWriter::create(
@@ -156,7 +155,9 @@ impl AudioStore {
                                     sample_rate,
                                     bits_per_sample: 32,
                                     sample_format: hound::SampleFormat::Int,
-                                }).unwrap();
+                                },
+                            )
+                            .unwrap();
                             // new_stream.send_item(chunk.to_vec());
                             // let livestreams = this.livestreams.clone();
                             // async_std::task::block_on(async move {

@@ -37,7 +37,12 @@ impl AudioService {
                 match frame {
                     Err(e) => println!("[{}] mp3 decoding error: {:?}", &channel_name, e),
                     Ok(frame) => {
-                        audio_in.send((frame.samples[0].iter().map(|v| v.to_i32()).collect(), frame.sample_rate)).unwrap();
+                        audio_in
+                            .send((
+                                frame.samples[0].iter().map(|v| v.to_i32()).collect(),
+                                frame.sample_rate,
+                            ))
+                            .unwrap();
                     }
                 }
             }

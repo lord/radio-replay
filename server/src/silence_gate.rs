@@ -6,9 +6,7 @@ pub struct SilenceGate {
 
 impl SilenceGate {
     pub fn new() -> Self {
-        Self {
-            sound_count: 0,
-        }
+        Self { sound_count: 0 }
     }
 
     pub fn add_sound(&mut self, data: &[i32]) {
