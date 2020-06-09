@@ -21,7 +21,7 @@ pub struct AudioService {
 
 impl AudioService {
     pub fn new() -> AudioService {
-        let metadata = RecentCache::new(METADATA_SENT_ON_INITIAL_LOAD);
+        let metadata = RecentCache::new(Some(METADATA_SENT_ON_INITIAL_LOAD));
         AudioService {
             metadata: metadata.clone(),
             store: AudioStore::new(metadata),

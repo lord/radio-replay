@@ -19,9 +19,9 @@ pub struct RecentCache<T: Send + Clone + 'static> {
 
 /// An async-channel cache. Allows sending new messages of type `T` to any number of listening Receivers.
 /// When a new receiever connects with `get_stream`, it will receieve the most recent `capacity` messages
-/// sent to the other streams.
+/// sent to the other streams. If capacity is `None`, the cache will have infinite size.
 impl <T: Send + Clone + 'static> RecentCache<T> {
-    pub fn new(capacity: usize) -> Self {
+    pub fn new(capacity: Option<usize>) -> Self {
         let (new_messages_tx, new_messages_rx) = mpsc::unbounded();
         let (new_senders_tx, new_senders_rx) = mpsc::unbounded();
         async_std::task::spawn(Self::handler_task(capacity, new_messages_rx, new_senders_rx));
@@ -31,8 +31,8 @@ impl <T: Send + Clone + 'static> RecentCache<T> {
         }
     }
 
-    async fn handler_task(capacity: usize, mut new_messages: Receiver<T>, mut new_senders: Receiver<Sender<T>>) {
-        let mut recent_messages = VecDeque::with_capacity(capacity);
+    async fn handler_task(capacity: Option<usize>, mut new_messages: Receiver<T>, mut new_senders: Receiver<Sender<T>>) {
+        let mut recent_messages = VecDeque::with_capacity(capacity.unwrap_or(0));
         let mut senders = Vec::new();
         loop {
             let mut next_msg = new_messages.next().fuse();
@@ -44,10 +44,12 @@ impl <T: Send + Clone + 'static> RecentCache<T> {
                         // TODO not sure if should break here
                         None => break,
                     };
-                    while recent_messages.len() >= capacity-1 && capacity > 0 {
-                        recent_messages.pop_front();
+                    if let Some(capacity) = capacity {
+                        while recent_messages.len() >= capacity-1 && capacity > 0 {
+                            recent_messages.pop_front();
+                        }
                     }
-                    if capacity > 0 {
+                    if capacity != Some(0) {
                         recent_messages.push_back(item.clone());
                     }
                     senders.retain(|sender: &Sender<T>| {
