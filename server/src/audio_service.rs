@@ -1,4 +1,4 @@
-use futures::channel::mpsc::{UnboundedReceiver as Receiver};
+use futures::channel::mpsc::UnboundedReceiver as Receiver;
 use std::time::Duration;
 
 use crate::recent_cache::RecentCache;

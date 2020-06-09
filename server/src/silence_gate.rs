@@ -1,5 +1,5 @@
 // const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
-const SILENCE_POWER_THRESHOLD: f64 =      10000.0;
+const SILENCE_POWER_THRESHOLD: f64 = 10000.0;
 const SILENCE_SAMPLE_WINDOW: usize = 8000;
 
 use std::collections::VecDeque;

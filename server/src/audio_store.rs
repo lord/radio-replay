@@ -2,7 +2,7 @@ use async_std::fs::File;
 use async_std::prelude::*;
 use async_std::stream::Stream;
 use async_std::task::Context;
-use futures::channel::mpsc::{UnboundedReceiver as Receiver};
+use futures::channel::mpsc::UnboundedReceiver as Receiver;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::atomic::AtomicU64;
@@ -11,9 +11,9 @@ use std::sync::mpsc as sync_mpsc;
 use std::task::Poll;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::encoder::Encoder;
 use crate::recent_cache::RecentCache;
 use crate::silence_gate::SilenceGate;
-use crate::encoder::Encoder;
 use async_std::sync::Mutex;
 use std::sync::Arc;
 
@@ -71,8 +71,8 @@ impl async_std::io::Read for AudioStream {
                         Poll::Ready(None) => {
                             println!("closed!");
                             *closed = true;
-                            return Poll::Ready(Ok(0))
-                        },
+                            return Poll::Ready(Ok(0));
+                        }
                         // another item is ready, load it up
                         Poll::Ready(Some(item)) => {
                             *current_index = 0;
@@ -92,7 +92,7 @@ impl async_std::io::Read for AudioStream {
                     let write_len = left_in_buf.min(left_in_current_chunk);
 
                     if left_in_buf == 0 {
-                        break
+                        break;
                     }
 
                     buf[total_written..(total_written + write_len)]
@@ -141,7 +141,13 @@ impl AudioStore {
                             let this2 = this.clone();
                             async_std::task::spawn(async move {
                                 let mut file = File::create(format!("{}.mp3", id.0)).await.unwrap();
-                                let mut stream = this2.livestreams.lock().await.remove(&id).unwrap().get_stream();
+                                let mut stream = this2
+                                    .livestreams
+                                    .lock()
+                                    .await
+                                    .remove(&id)
+                                    .unwrap()
+                                    .get_stream();
                                 while let Some(buf) = stream.next().await {
                                     file.write_all(&buf).await.unwrap();
                                 }
@@ -175,7 +181,11 @@ impl AudioStore {
                                 id: AudioId(id),
                             };
                             async_std::task::spawn(async move {
-                                this2.livestreams.lock().await.insert(AudioId(id), new_stream.clone());
+                                this2
+                                    .livestreams
+                                    .lock()
+                                    .await
+                                    .insert(AudioId(id), new_stream.clone());
                                 this2.metadata.send_item(metadata);
                             });
                         }
