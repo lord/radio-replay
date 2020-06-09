@@ -1,4 +1,4 @@
-import React, { useEffect, useRef} from "react";
+import React, { useEffect, useRef } from "react";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import moment from "moment";
@@ -14,7 +14,7 @@ const scrollToRef = (ref) => {
 
 const Clip = (props) => {
   const ref = useRef(null);
-  const { timestamp, channel, url} = props.clip;
+  const { timestamp, channel, url } = props.clip;
   const adjustedTimestamp = getEastCoastTime(timestamp);
 
   useEffect(() => {
@@ -34,6 +34,10 @@ const Clip = (props) => {
         url={url}
         handleCurrentlyPlaying={props.handleCurrentlyPlaying}
         currentlyPlaying={props.currentlyPlaying}
+        autoPlay={props.autoPlay}
+        autoPlayNew={props.autoPlayNew}
+        shouldAutoPlayNext={props.shouldAutoPlayNext}
+        queueNextClipToPlay={props.queueNextClipToPlay}
       />
       <IconButton href={"http://localhost:8080" + url}>
         <GetAppIcon />

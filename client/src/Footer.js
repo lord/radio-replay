@@ -10,6 +10,7 @@ import ListItemText from "@material-ui/core/ListItemText";
 import moment from "moment";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import { getEastCoastTime } from "./helperFunctions";
+
 const useStyles = makeStyles((theme) => ({
   appBar: {
     top: "auto",
@@ -20,9 +21,11 @@ const useStyles = makeStyles((theme) => ({
     [theme.breakpoints.up("sm")]: {
       display: "block",
     },
+    width: "100%",
   },
   toolbar: {
     paddingLeft: "16px !important",
+    display: "flex",
   },
   menuButton: {
     paddingLeft: "22px",
@@ -34,16 +37,18 @@ const Footer = (props) => {
   const classes = useStyles();
   const [waiting, setWaiting] = useState(false);
 
-  useEffect(()=>{
-    if (!(props.currentlyPlaying === "waiting")){
-      setWaiting(false)
+  useEffect(() => {
+    if (!(props.currentlyPlaying === "waiting")) {
+      setWaiting(false);
+    } else {
+      setWaiting(true);
     }
-  }, [props.currentlyPlaying])
+  }, [props.currentlyPlaying]);
 
   const handleWaitingClick = () => {
     const isWaiting = waiting;
     setWaiting(!isWaiting);
-    const currentlyPlaying = !isWaiting ? "waiting" : null
+    const currentlyPlaying = !isWaiting ? "waiting" : null;
     props.handleWaitingForClip(currentlyPlaying);
   };
   const [liveTime, setLiveTime] = useState(getEastCoastTime(new Date()));
@@ -80,6 +85,18 @@ const Footer = (props) => {
               ? "Waiting for next audio clip..."
               : "Click play to wait for next audio clip to arrive."}
           </Typography>
+          {/*<FormControlLabel*/}
+          {/*  value="top"*/}
+          {/*  control={*/}
+          {/*    <Checkbox*/}
+          {/*      color="secondary"*/}
+          {/*      checked={props.shouldAutoPlayNext}*/}
+          {/*      onChange={props.handleSetShouldAutoPlayNext}*/}
+          {/*    />*/}
+          {/*  }*/}
+          {/*  label={"autoplay"}*/}
+          {/*  labelPlacement="start"*/}
+          {/*/>*/}
         </Toolbar>
       </AppBar>
     </div>

@@ -13,6 +13,9 @@ const theme = createMuiTheme({
       dark: "#37474f",
       contrastText: "#eceff1",
     },
+    secondary: {
+      main: "#b0bec5",
+    },
   },
   typography: {
     fontFamily: "Tahoma",
@@ -22,6 +25,10 @@ const theme = createMuiTheme({
 const App = () => {
   const [clips, _setClips] = useState([]);
   const clipsRef = useRef(clips);
+  const [shouldAutoPlayNext, setShouldAutoPlayNext] = useState(true);
+  const handleSetShouldAutoPlayNext = () => {
+    setShouldAutoPlayNext(!shouldAutoPlayNext);
+  };
 
   const setClips = (data) => {
     clipsRef.current = data;
@@ -29,11 +36,18 @@ const App = () => {
   };
 
   // null, "waiting", or url of audio clip
-  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [currentlyPlaying, _setCurrentlyPlaying] = useState(null);
+  const currentlyPlayingRef = useRef(currentlyPlaying);
+  const setCurrentlyPlaying = (data) => {
+    currentlyPlayingRef.current = data;
+    _setCurrentlyPlaying(data);
+  };
 
   const handleCurrentlyPlaying = (currentItem) => {
     setCurrentlyPlaying(currentItem);
   };
+
+  const [playClipNext, setPlayClipNext] = useState("");
 
   useEffect(() => {
     // TO DO: set source url for environments to get correct host
@@ -50,11 +64,15 @@ const App = () => {
           queuedData.forEach((item) => {
             newClips.push(item);
           });
+
           setClips(newClips);
           queuedData = [];
         }, 100);
       }
       queuedData.push(parsedData);
+      if (currentlyPlayingRef.current === "waiting") {
+        setPlayClipNext(parsedData.url);
+      }
     });
 
     eventSource.onerror = () => {
@@ -71,12 +89,16 @@ const App = () => {
         handleCurrentlyPlaying={(currentItem) =>
           handleCurrentlyPlaying(currentItem)
         }
+        newClipToPlay={playClipNext}
+        shouldAutoPlayNext={shouldAutoPlayNext}
       />
       <Footer
         handleWaitingForClip={(currentItem) =>
           handleCurrentlyPlaying(currentItem)
         }
         currentlyPlaying={currentlyPlaying}
+        shouldAutoPlayNext={shouldAutoPlayNext}
+        handleSetShouldAutoPlayNext={() => handleSetShouldAutoPlayNext()}
       />
     </ThemeProvider>
   );
