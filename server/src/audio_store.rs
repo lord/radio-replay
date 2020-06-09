@@ -36,6 +36,7 @@ pub enum AudioStream {
         new_chunks: Receiver<Vec<u8>>,
         current_chunk: Option<Vec<u8>>,
         current_index: usize,
+        closed: bool,
     },
 }
 
@@ -61,13 +62,21 @@ impl async_std::io::Read for AudioStream {
                 new_chunks,
                 current_chunk,
                 current_index,
+                closed,
             } => {
+                if *closed {
+                    return Poll::Ready(Ok(0));
+                }
                 if current_chunk.is_none() {
                     match Stream::poll_next(Pin::new(new_chunks), cx) {
                         // waiting for new chunks
                         Poll::Pending => return Poll::Pending,
                         // end of stream; report zero more chunks
-                        Poll::Ready(None) => return Poll::Ready(Ok(0)),
+                        Poll::Ready(None) => {
+                            println!("closed!");
+                            *closed = true;
+                            return Poll::Ready(Ok(0))
+                        },
                         // another item is ready, load it up
                         Poll::Ready(Some(item)) => {
                             *current_index = 0;
@@ -76,7 +85,9 @@ impl async_std::io::Read for AudioStream {
                     }
                 }
                 let mut total_written = 0;
+                let mut i = 0;
                 loop {
+                    i += 1;
                     let chunk = match current_chunk {
                         Some(v) => v,
                         None => break,
@@ -124,20 +135,25 @@ impl AudioStore {
         let (sender, receiver) = sync_mpsc::channel::<(Vec<i16>, u32)>();
         let this = self.clone();
         std::thread::spawn(move || {
-            let mut current_message_writer: Option<Encoder<_>> = None;
+            let mut current_message_writer: Option<(AudioId, Encoder<_>)> = None;
             let mut silence_gate = SilenceGate::new();
             while let Ok((data, sample_rate)) = receiver.recv() {
                 for chunk in data.chunks(10_000) {
                     silence_gate.add_sound(&chunk);
                     match (silence_gate.is_open(), current_message_writer.take()) {
-                        (false, Some(mut writer)) => {
+                        (false, Some((id, mut writer))) => {
                             // close the current message after sending this data
                             writer.add_pcm(chunk);
+                            let this2 = this.clone();
+                            async_std::task::spawn(async move {
+                                this2.livestreams.lock().await.remove(&id);
+                                // TODO write file to disk
+                            });
                         }
-                        (true, Some(mut writer)) => {
+                        (true, Some((id, mut writer))) => {
                             // continue current message
                             writer.add_pcm(chunk);
-                            current_message_writer = Some(writer);
+                            current_message_writer = Some((id, writer));
                         }
                         (false, None) => {
                             // do nothing
@@ -153,7 +169,7 @@ impl AudioStore {
                             println!("creating {}", id);
                             let mut new_writer = Encoder::new(new_stream.clone(), sample_rate);
                             new_writer.add_pcm(chunk);
-                            current_message_writer = Some(new_writer);
+                            current_message_writer = Some((AudioId(id), new_writer));
                             let this2 = this.clone();
                             let metadata = AudioMetadata {
                                 timestamp,
@@ -181,6 +197,7 @@ impl AudioStore {
                     new_chunks,
                     current_chunk: None,
                     current_index: 0,
+                    closed: false,
                 })
             }
             None => {
