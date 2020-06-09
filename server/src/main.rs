@@ -10,7 +10,7 @@ async fn main() -> Result<(), std::io::Error> {
     let mut audio_service = audio_service::AudioService::new();
     audio_service.add_source(
         "nypd-cw2".to_string(),
-        "http://scanner.fuck12.tech:8000/nypd-cw2".to_string(),
+        "http://scanner.fuck12.tech:8000/nypd-cw1".to_string(),
     );
 
     let mut app = tide::new();
