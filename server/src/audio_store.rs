@@ -4,11 +4,17 @@ use async_std::prelude::*;
 use async_std::stream::Stream;
 use async_std::task::Context;
 use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
+use std::sync::mpsc as sync_mpsc;
 use std::pin::Pin;
 use std::task::Poll;
 use std::time::Duration;
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use hound::WavWriter;
 
+use crate::silence_gate::SilenceGate;
 use crate::recent_cache::RecentCache;
 use std::sync::Arc;
 use async_std::sync::Mutex;
@@ -21,6 +27,7 @@ const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
 pub struct AudioStore {
     livestreams: Arc<Mutex<HashMap<AudioId, RecentCache<Vec<u8>>>>>,
     metadata: RecentCache<AudioMetadata>,
+    next_id: Arc<AtomicU64>,
 }
 
 pub enum AudioStream {
@@ -101,15 +108,75 @@ impl async_std::io::Read for AudioStream {
 
 impl AudioStore {
     pub fn new(metadata: RecentCache<AudioMetadata>) -> Self {
+        // TODO load next_id from filesystem
         Self {
             livestreams: Arc::new(Mutex::new(HashMap::new())),
             metadata,
+            next_id: Arc::new(AtomicU64::new(0)),
         }
     }
 
-    pub fn get_audio_input(&self, channel_name: &str) -> Sender<Vec<i32>> {
-        // metadata_cache.send_item...()
-        unimplemented!()
+    pub fn get_audio_input(&self, channel_name: String) -> sync_mpsc::Sender<Vec<i32>> {
+        let (sender, receiver) = sync_mpsc::channel::<Vec<i32>>();
+        let this = self.clone();
+        std::thread::spawn(move || {
+            let mut current_message_writer: Option<WavWriter<_>> = None;
+            let mut silence_gate = SilenceGate::new();
+            while let Ok(data) = receiver.recv() {
+                for chunk in data.chunks(10_000) {
+                    silence_gate.add_sound(&chunk);
+                    match (silence_gate.is_open(), current_message_writer.take()) {
+                        (false, Some(mut writer)) => {
+                            // close the current message after sending this data
+                            for sample in chunk {
+                                writer.write_sample(*sample);
+                            }
+                        }
+                        (true, Some(mut writer)) => {
+                            // continue current message
+                            for sample in chunk {
+                                writer.write_sample(*sample);
+                            }
+                            current_message_writer = Some(writer);
+                        }
+                        (false, None) => {
+                            // do nothing
+                        }
+                        (true, None) => {
+                            // open a new message
+                            let timestamp = (SystemTime::now()
+                                                            .duration_since(UNIX_EPOCH)
+                                                            .expect("Time went backwards")
+                                                            .as_millis()
+                                                            as u64);
+                            // let new_stream = RecentCache::new(None);
+                            let id = this.next_id.fetch_add(1, Ordering::SeqCst);
+                            let new_writer = WavWriter::create(
+                                format!("{}.wav", id),
+                                hound::WavSpec {
+                                    channels: 1,
+                                    sample_rate: 14000,
+                                    bits_per_sample: 32,
+                                    sample_format: hound::SampleFormat::Int,
+                                }).unwrap();
+                            // new_stream.send_item(chunk.to_vec());
+                            // let livestreams = this.livestreams.clone();
+                            // async_std::task::block_on(async move {
+                            //     livestreams.lock().await.insert(AudioId(id), new_stream.clone());
+                            // });
+                            let metadata = AudioMetadata {
+                                timestamp,
+                                channel: channel_name.clone(),
+                                id: AudioId(id),
+                            };
+                            this.metadata.send_item(metadata);
+                            current_message_writer = Some(new_writer);
+                        }
+                    }
+                }
+            }
+        });
+        sender
     }
 
     pub async fn get_stream(&self, id: AudioId) -> Option<AudioStream> {
@@ -143,12 +210,7 @@ impl AudioStore {
 //             Err(e) => println!("Error: {:?}", e),
 //             Ok(frame) => {
 //                 let writer = writer_opt.get_or_insert_with(|| {
-//                     let spec = hound::WavSpec {
-//                         channels: 1,
-//                         sample_rate: frame.sample_rate,
-//                         bits_per_sample: 32,
-//                         sample_format: hound::SampleFormat::Int,
-//                     };
+//                     let spec = ;
 //                     n += 1;
 //                     println!("== file {} ==", n);
 //                     hound::WavWriter::create(&format!("{}.wav", n), spec).unwrap()

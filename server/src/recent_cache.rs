@@ -17,6 +17,17 @@ pub struct RecentCache<T: Send + Clone + 'static> {
     new_senders: Sender<Sender<T>>,
 }
 
+impl std::io::Write for RecentCache<Vec<u8>> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.send_item(buf.to_vec());
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 /// An async-channel cache. Allows sending new messages of type `T` to any number of listening Receivers.
 /// When a new receiever connects with `get_stream`, it will receieve the most recent `capacity` messages
 /// sent to the other streams. If capacity is `None`, the cache will have infinite size.

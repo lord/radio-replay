@@ -3,6 +3,7 @@
 mod audio_service;
 mod audio_store;
 mod recent_cache;
+mod silence_gate;
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {

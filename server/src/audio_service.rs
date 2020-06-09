@@ -28,7 +28,7 @@ impl AudioService {
     }
 
     pub fn add_source(&self, channel_name: String, url: String) {
-        let audio_in = self.store.get_audio_input(&channel_name);
+        let audio_in = self.store.get_audio_input(channel_name.clone());
         std::thread::spawn(move || loop {
             let resp = reqwest::blocking::get(&url).unwrap();
             let mut decoder = simplemad::Decoder::decode(resp).unwrap();
@@ -37,7 +37,7 @@ impl AudioService {
                 match frame {
                     Err(e) => println!("[{}] mp3 decoding error: {:?}", &channel_name, e),
                     Ok(frame) => {
-                        audio_in.unbounded_send(frame.samples[0].iter().map(|v| v.to_i32()).collect());
+                        audio_in.send(frame.samples[0].iter().map(|v| v.to_i32()).collect()).unwrap();
                     }
                 }
             }
