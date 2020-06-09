@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef} from "react";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import moment from "moment";
@@ -7,6 +7,7 @@ import IconButton from "@material-ui/core/IconButton";
 import GetAppIcon from "@material-ui/icons/GetApp";
 import { getEastCoastTime } from "./helperFunctions";
 import AudioPlayer from "./AudioPlayer";
+import makeStyles from "@material-ui/core/styles/makeStyles";
 
 const scrollToRef = (ref) => {
   window.scrollTo(0, ref.current.offsetTop);
@@ -21,11 +22,23 @@ const Clip = (props) => {
     scrollToRef(ref);
   }, [props.clip]);
 
+  const useStyles = makeStyles((theme) => ({
+    listItem: {
+      backgroundColor: props.currentlyPlaying === url ? "#cfd8dc" : "white",
+      "&:hover": {
+        backgroundColor: "#eceff1",
+      },
+    },
+    listItemText: { marginRight: "30px", marginLeft: "20px" },
+  }));
+
+  const classes = useStyles();
+
   return (
-    <ListItem ref={ref}>
+    <ListItem ref={ref} className={classes.listItem}>
       <ListItemAvatar>
         <ListItemText
-          style={{ marginRight: "30px", marginLeft: "20px" }}
+          className={classes.listItemText}
           primary={moment(adjustedTimestamp).format("h:mm:ss [ET]")}
           secondary={channel}
         />

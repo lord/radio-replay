@@ -10,6 +10,8 @@ import ListItemText from "@material-ui/core/ListItemText";
 import moment from "moment";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import { getEastCoastTime } from "./helperFunctions";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Checkbox from "@material-ui/core/Checkbox";
 
 const useStyles = makeStyles((theme) => ({
   appBar: {
@@ -25,7 +27,6 @@ const useStyles = makeStyles((theme) => ({
   },
   toolbar: {
     paddingLeft: "16px !important",
-    display: "flex",
   },
   menuButton: {
     paddingLeft: "22px",
