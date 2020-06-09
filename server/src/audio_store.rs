@@ -107,7 +107,7 @@ impl AudioStore {
         }
     }
 
-    pub fn add_audio(&self, channel_name: &str, data: Vec<i32>) {
+    pub fn get_audio_input(&self, channel_name: &str) -> Sender<Vec<i32>> {
         // metadata_cache.send_item...()
         unimplemented!()
     }

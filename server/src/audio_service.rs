@@ -13,7 +13,6 @@ use crate::audio_store::{AudioId, AudioMetadata, AudioStore, AudioStream};
 const METADATA_SENT_ON_INITIAL_LOAD: usize = 400;
 const RECONNECT_WAIT: Duration = Duration::from_secs(5);
 
-#[derive(Clone)]
 pub struct AudioService {
     metadata: RecentCache<AudioMetadata>,
     store: AudioStore,
@@ -29,7 +28,7 @@ impl AudioService {
     }
 
     pub fn add_source(&self, channel_name: String, url: String) {
-        let this = self.clone();
+        let audio_in = self.store.get_audio_input(&channel_name);
         std::thread::spawn(move || loop {
             let resp = reqwest::blocking::get(&url).unwrap();
             let mut decoder = simplemad::Decoder::decode(resp).unwrap();
@@ -38,10 +37,7 @@ impl AudioService {
                 match frame {
                     Err(e) => println!("[{}] mp3 decoding error: {:?}", &channel_name, e),
                     Ok(frame) => {
-                        this.store.add_audio(
-                            &channel_name,
-                            frame.samples[0].iter().map(|v| v.to_i32()).collect(),
-                        );
+                        audio_in.unbounded_send(frame.samples[0].iter().map(|v| v.to_i32()).collect());
                     }
                 }
             }
