@@ -13,6 +13,7 @@ use crate::audio_store::{AudioId, AudioMetadata, AudioStore, AudioStream};
 const METADATA_SENT_ON_INITIAL_LOAD: usize = 400;
 const RECONNECT_WAIT: Duration = Duration::from_secs(5);
 
+#[derive(Clone)]
 pub struct AudioService {
     metadata: RecentCache<AudioMetadata>,
     store: AudioStore,

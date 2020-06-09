@@ -41,13 +41,13 @@ pub enum AudioStream {
 
 #[derive(Clone, Debug)]
 pub struct AudioMetadata {
-    timestamp: u64,
-    channel: String,
-    id: AudioId,
+    pub timestamp: u64,
+    pub channel: String,
+    pub id: AudioId,
 }
 
 #[derive(Hash, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AudioId(u64);
+pub struct AudioId(pub u64);
 
 impl async_std::io::Read for AudioStream {
     fn poll_read(
@@ -86,6 +86,10 @@ impl async_std::io::Read for AudioStream {
                     let left_in_current_chunk = chunk.len() - *current_index;
                     let write_len = left_in_buf.min(left_in_current_chunk);
 
+                    if left_in_buf == 0 {
+                        break
+                    }
+
                     buf[total_written..(total_written + write_len)]
                         .copy_from_slice(&chunk[*current_index..(*current_index + write_len)]);
                     *current_index += write_len;
@@ -120,7 +124,7 @@ impl AudioStore {
         let (sender, receiver) = sync_mpsc::channel::<(Vec<i16>, u32)>();
         let this = self.clone();
         std::thread::spawn(move || {
-            let mut current_message_writer: Option<Encoder<SyncFile>> = None;
+            let mut current_message_writer: Option<Encoder<_>> = None;
             let mut silence_gate = SilenceGate::new();
             while let Ok((data, sample_rate)) = receiver.recv() {
                 for chunk in data.chunks(10_000) {
@@ -144,34 +148,22 @@ impl AudioStore {
                                 .duration_since(UNIX_EPOCH)
                                 .expect("Time went backwards")
                                 .as_millis() as u64);
-                            // let new_stream = RecentCache::new(None);
+                            let new_stream = RecentCache::new(None);
                             let id = this.next_id.fetch_add(1, Ordering::SeqCst);
                             println!("creating {}", id);
-                            let file = SyncFile::create(format!("{}.mp3", id)).unwrap();
-                            let mut new_writer = Encoder::new(file, sample_rate);
-                            // let new_writer = WavWriter::create(
-                            //     format!("{}.wav", id),
-                            //     hound::WavSpec {
-                            //         channels: 1,
-                            //         sample_rate,
-                            //         bits_per_sample: 32,
-                            //         sample_format: hound::SampleFormat::Int,
-                            //     },
-                            // )
-                            // .unwrap();
+                            let mut new_writer = Encoder::new(new_stream.clone(), sample_rate);
                             new_writer.add_pcm(chunk);
-                            // new_stream.send_item(chunk.to_vec());
-                            // let livestreams = this.livestreams.clone();
-                            // async_std::task::block_on(async move {
-                            //     livestreams.lock().await.insert(AudioId(id), new_stream.clone());
-                            // });
+                            current_message_writer = Some(new_writer);
+                            let this2 = this.clone();
                             let metadata = AudioMetadata {
                                 timestamp,
                                 channel: channel_name.clone(),
                                 id: AudioId(id),
                             };
-                            this.metadata.send_item(metadata);
-                            current_message_writer = Some(new_writer);
+                            async_std::task::spawn(async move {
+                                this2.livestreams.lock().await.insert(AudioId(id), new_stream.clone());
+                                this2.metadata.send_item(metadata);
+                            });
                         }
                     }
                 }
