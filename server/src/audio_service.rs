@@ -1,12 +1,7 @@
-use async_std::prelude::StreamExt;
-use async_std::task::Context;
-use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
-use std::pin::Pin;
-use std::task::Poll;
+use futures::channel::mpsc::{UnboundedReceiver as Receiver};
 use std::time::Duration;
 
 use crate::recent_cache::RecentCache;
-use std::sync::{Arc, Mutex};
 
 use crate::audio_store::{AudioId, AudioMetadata, AudioStore, AudioStream};
 
@@ -32,7 +27,7 @@ impl AudioService {
         let audio_in = self.store.get_audio_input(channel_name.clone());
         std::thread::spawn(move || loop {
             let resp = reqwest::blocking::get(&url).unwrap();
-            let mut decoder = simplemad::Decoder::decode(resp).unwrap();
+            let decoder = simplemad::Decoder::decode(resp).unwrap();
 
             for frame in decoder {
                 match frame {

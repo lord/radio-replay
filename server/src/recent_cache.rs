@@ -1,15 +1,8 @@
-use async_std::io::Read;
 use async_std::prelude::StreamExt;
-use async_std::sync::Mutex;
-use async_std::task::Context;
 use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
 use futures::future::FutureExt;
 use futures::select;
 use std::collections::VecDeque;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::Poll;
-use std::time::Duration;
 
 #[derive(Clone)]
 pub struct RecentCache<T: Send + Clone + 'static> {

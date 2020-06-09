@@ -10,10 +10,10 @@ pub struct Encoder<W: Write> {
 impl <W: Write> Encoder<W> {
     pub fn new(writer: W, sample_rate: u32) -> Self {
         let mut lame = Lame::new().unwrap();
-        lame.set_quality(3);
-        lame.set_sample_rate(sample_rate);
-        lame.set_kilobitrate(64);
-        lame.init_params();
+        lame.set_quality(3).unwrap();
+        lame.set_sample_rate(sample_rate).unwrap();
+        lame.set_kilobitrate(64).unwrap();
+        lame.init_params().unwrap();
         Self {
             lame,
             writer,
@@ -35,7 +35,7 @@ impl <W: Write> Encoder<W> {
                 if self.writer.write(&buf).unwrap() != len {
                     panic!("failed to write entire packet");
                 }
-                self.writer.flush();
+                self.writer.flush().unwrap();
             }
             Err(lame::EncodeError::OutputBufferTooSmall) => {
                 self.add_pcm0(data, buffer_size * 2)

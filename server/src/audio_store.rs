@@ -2,15 +2,13 @@ use async_std::fs::File;
 use async_std::prelude::*;
 use async_std::stream::Stream;
 use async_std::task::Context;
-use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
-use hound::WavWriter;
+use futures::channel::mpsc::{UnboundedReceiver as Receiver};
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc as sync_mpsc;
 use std::task::Poll;
-use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::recent_cache::RecentCache;
@@ -83,9 +81,7 @@ impl async_std::io::Read for AudioStream {
                     }
                 }
                 let mut total_written = 0;
-                let mut i = 0;
                 loop {
-                    i += 1;
                     let chunk = match current_chunk {
                         Some(v) => v,
                         None => break,
@@ -147,7 +143,7 @@ impl AudioStore {
                                 let mut file = File::create(format!("{}.mp3", id.0)).await.unwrap();
                                 let mut stream = this2.livestreams.lock().await.remove(&id).unwrap().get_stream();
                                 while let Some(buf) = stream.next().await {
-                                    file.write_all(&buf).await;
+                                    file.write_all(&buf).await.unwrap();
                                 }
                                 println!("file finished writing to disk");
                             });
@@ -162,10 +158,10 @@ impl AudioStore {
                         }
                         (true, None) => {
                             // open a new message
-                            let timestamp = (SystemTime::now()
+                            let timestamp = SystemTime::now()
                                 .duration_since(UNIX_EPOCH)
                                 .expect("Time went backwards")
-                                .as_millis() as u64);
+                                .as_millis() as u64;
                             let new_stream = RecentCache::new(None);
                             let id = this.next_id.fetch_add(1, Ordering::SeqCst);
                             println!("creating {}", id);

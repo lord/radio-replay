@@ -27,7 +27,7 @@ async fn serve_audio(srv: audio_service::AudioService, req: tide::Request<()>) -
 
 #[async_std::main]
 async fn main() -> Result<(), std::io::Error> {
-    let mut audio_service = audio_service::AudioService::new();
+    let audio_service = audio_service::AudioService::new();
     audio_service.add_source(
         "nypd-cw2".to_string(),
         "https://broadcastify.cdnstream1.com/32890".to_string(),
