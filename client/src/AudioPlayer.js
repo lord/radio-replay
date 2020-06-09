@@ -42,7 +42,7 @@ const AudioPlayer = (props) => {
       onPlay={() => {
         props.handleCurrentlyPlaying(props.url);
       }}
-      style={{ width: "100%" }}
+      style={{ width: "100%", outline: 0 }}
       controls
       id={props.url}
     >

@@ -21,7 +21,7 @@ const Clips = (props) => {
   }, [props.shouldAutoPlayNext, props.clips]);
 
   return (
-    <List>
+    <List style={{paddingBottom:"0px"}}>
       {props.clips.map((clip, i) => {
         let autoPlayNew = false;
         let autoPlay = false;
