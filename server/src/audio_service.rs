@@ -60,7 +60,7 @@ impl AudioService {
         self.metadata.get_stream()
     }
 
-    pub fn stream_audio(&self, id: AudioId) -> AudioStream {
-        self.store.get_stream(id)
+    pub async fn stream_audio(&self, id: AudioId) -> Option<AudioStream> {
+        self.store.get_stream(id).await
     }
 }
