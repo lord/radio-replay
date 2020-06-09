@@ -114,13 +114,13 @@ impl AudioStore {
         }
     }
 
-    pub fn get_audio_input(&self, channel_name: String) -> sync_mpsc::Sender<Vec<i32>> {
-        let (sender, receiver) = sync_mpsc::channel::<Vec<i32>>();
+    pub fn get_audio_input(&self, channel_name: String) -> sync_mpsc::Sender<(Vec<i32>, u32)> {
+        let (sender, receiver) = sync_mpsc::channel::<(Vec<i32>, u32)>();
         let this = self.clone();
         std::thread::spawn(move || {
             let mut current_message_writer: Option<WavWriter<_>> = None;
             let mut silence_gate = SilenceGate::new();
-            while let Ok(data) = receiver.recv() {
+            while let Ok((data, sample_rate)) = receiver.recv() {
                 for chunk in data.chunks(10_000) {
                     silence_gate.add_sound(&chunk);
                     match (silence_gate.is_open(), current_message_writer.take()) {
@@ -153,7 +153,7 @@ impl AudioStore {
                                 format!("{}.wav", id),
                                 hound::WavSpec {
                                     channels: 1,
-                                    sample_rate: 14000,
+                                    sample_rate,
                                     bits_per_sample: 32,
                                     sample_format: hound::SampleFormat::Int,
                                 }).unwrap();
