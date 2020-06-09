@@ -1,6 +1,5 @@
 use async_std::fs::File;
 use async_std::prelude::*;
-use async_std::prelude::*;
 use async_std::stream::Stream;
 use async_std::task::Context;
 use futures::channel::mpsc::{self, UnboundedReceiver as Receiver, UnboundedSender as Sender};
@@ -13,7 +12,6 @@ use std::sync::mpsc as sync_mpsc;
 use std::task::Poll;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::fs::File as SyncFile;
 
 use crate::recent_cache::RecentCache;
 use crate::silence_gate::SilenceGate;
@@ -146,8 +144,12 @@ impl AudioStore {
                             writer.add_pcm(chunk);
                             let this2 = this.clone();
                             async_std::task::spawn(async move {
-                                this2.livestreams.lock().await.remove(&id);
-                                // TODO write file to disk
+                                let mut file = File::create(format!("{}.mp3", id.0)).await.unwrap();
+                                let mut stream = this2.livestreams.lock().await.remove(&id).unwrap().get_stream();
+                                while let Some(buf) = stream.next().await {
+                                    file.write_all(&buf).await;
+                                }
+                                println!("file finished writing to disk");
                             });
                         }
                         (true, Some((id, mut writer))) => {
@@ -202,7 +204,7 @@ impl AudioStore {
             }
             None => {
                 // no longer streaming live, serve from filesystem
-                match async_std::fs::File::open(format!("{}.wav", id.0)).await {
+                match async_std::fs::File::open(format!("{}.mp3", id.0)).await {
                     Ok(v) => Some(AudioStream::File(v)),
                     Err(_) => None,
                 }
