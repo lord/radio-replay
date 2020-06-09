@@ -2,7 +2,7 @@ use lame::Lame;
 
 use std::io::Write;
 
-struct Encoder<W: Write> {
+pub struct Encoder<W: Write> {
     lame: Lame,
     writer: W,
 }
@@ -13,6 +13,7 @@ impl <W: Write> Encoder<W> {
         lame.set_quality(3);
         lame.set_sample_rate(sample_rate);
         lame.set_kilobitrate(64);
+        lame.init_params();
         Self {
             lame,
             writer,

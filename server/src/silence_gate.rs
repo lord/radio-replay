@@ -1,4 +1,5 @@
-const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
+// const SILENCE_POWER_THRESHOLD: f64 = 1_000_000_000_000.0;
+const SILENCE_POWER_THRESHOLD: f64 =      10000.0;
 const SILENCE_SAMPLE_WINDOW: usize = 8000;
 
 use std::collections::VecDeque;
@@ -16,7 +17,7 @@ impl SilenceGate {
         }
     }
 
-    pub fn add_sound(&mut self, data: &[i32]) {
+    pub fn add_sound(&mut self, data: &[i16]) {
         for datum in data {
             let v = *datum as f64 * *datum as f64;
             if self.samples.len() == SILENCE_SAMPLE_WINDOW {

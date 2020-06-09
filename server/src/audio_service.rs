@@ -39,7 +39,7 @@ impl AudioService {
                     Ok(frame) => {
                         audio_in
                             .send((
-                                frame.samples[0].iter().map(|v| v.to_i32()).collect(),
+                                frame.samples[0].iter().map(|v| v.to_i16()).collect(),
                                 frame.sample_rate,
                             ))
                             .unwrap();

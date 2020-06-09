@@ -13,9 +13,11 @@ use std::sync::mpsc as sync_mpsc;
 use std::task::Poll;
 use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::fs::File as SyncFile;
 
 use crate::recent_cache::RecentCache;
 use crate::silence_gate::SilenceGate;
+use crate::encoder::Encoder;
 use async_std::sync::Mutex;
 use std::sync::Arc;
 
@@ -114,11 +116,11 @@ impl AudioStore {
         }
     }
 
-    pub fn get_audio_input(&self, channel_name: String) -> sync_mpsc::Sender<(Vec<i32>, u32)> {
-        let (sender, receiver) = sync_mpsc::channel::<(Vec<i32>, u32)>();
+    pub fn get_audio_input(&self, channel_name: String) -> sync_mpsc::Sender<(Vec<i16>, u32)> {
+        let (sender, receiver) = sync_mpsc::channel::<(Vec<i16>, u32)>();
         let this = self.clone();
         std::thread::spawn(move || {
-            let mut current_message_writer: Option<WavWriter<_>> = None;
+            let mut current_message_writer: Option<Encoder<SyncFile>> = None;
             let mut silence_gate = SilenceGate::new();
             while let Ok((data, sample_rate)) = receiver.recv() {
                 for chunk in data.chunks(10_000) {
@@ -126,15 +128,11 @@ impl AudioStore {
                     match (silence_gate.is_open(), current_message_writer.take()) {
                         (false, Some(mut writer)) => {
                             // close the current message after sending this data
-                            for sample in chunk {
-                                writer.write_sample(*sample);
-                            }
+                            writer.add_pcm(chunk);
                         }
                         (true, Some(mut writer)) => {
                             // continue current message
-                            for sample in chunk {
-                                writer.write_sample(*sample);
-                            }
+                            writer.add_pcm(chunk);
                             current_message_writer = Some(writer);
                         }
                         (false, None) => {
@@ -148,16 +146,20 @@ impl AudioStore {
                                 .as_millis() as u64);
                             // let new_stream = RecentCache::new(None);
                             let id = this.next_id.fetch_add(1, Ordering::SeqCst);
-                            let new_writer = WavWriter::create(
-                                format!("{}.wav", id),
-                                hound::WavSpec {
-                                    channels: 1,
-                                    sample_rate,
-                                    bits_per_sample: 32,
-                                    sample_format: hound::SampleFormat::Int,
-                                },
-                            )
-                            .unwrap();
+                            println!("creating {}", id);
+                            let file = SyncFile::create(format!("{}.mp3", id)).unwrap();
+                            let mut new_writer = Encoder::new(file, sample_rate);
+                            // let new_writer = WavWriter::create(
+                            //     format!("{}.wav", id),
+                            //     hound::WavSpec {
+                            //         channels: 1,
+                            //         sample_rate,
+                            //         bits_per_sample: 32,
+                            //         sample_format: hound::SampleFormat::Int,
+                            //     },
+                            // )
+                            // .unwrap();
+                            new_writer.add_pcm(chunk);
                             // new_stream.send_item(chunk.to_vec());
                             // let livestreams = this.livestreams.clone();
                             // async_std::task::block_on(async move {
